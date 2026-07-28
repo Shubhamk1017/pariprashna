@@ -72,7 +72,19 @@ mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
-.then(() => console.log('MongoDB connected'))
+.then(() => {
+  console.log('MongoDB connected');
+  // Initialize WhatsApp client AFTER DB is ready
+  if (process.env.WHATSAPP_GROUP_ID) {
+    try {
+      const whatsappService = require('./services/whatsapp');
+      whatsappService.initClient();
+      console.log('[WhatsApp] Client initialization triggered');
+    } catch (e) {
+      console.error('[WhatsApp] Failed to initialize:', e.message);
+    }
+  }
+})
 .catch(err => {
   console.error('MongoDB connection error:', err);
   process.exit(1);
@@ -117,15 +129,4 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-
-  // Initialize WhatsApp client if configured
-  if (process.env.WHATSAPP_GROUP_ID) {
-    try {
-      const whatsappService = require('./services/whatsapp');
-      whatsappService.initClient();
-      console.log('[WhatsApp] Client initialization triggered');
-    } catch (e) {
-      console.error('[WhatsApp] Failed to initialize:', e.message);
-    }
-  }
 });
