@@ -1,8 +1,8 @@
-# Hindu QnA - User Manual
+# Pariprashna - User Manual
 
 ## Welcome
 
-Hindu QnA is a community-driven Q&A platform for authentic answers about Hinduism, Sanatan Dharma, and related topics. It features AI-generated answers verified by certified gurus and scholars.
+Pariprashna (परिप्रश्न) is a community-driven Q&A platform for authentic answers about Hinduism, Sanatan Dharma, and related topics. It features AI-generated answers verified by certified gurus and scholars.
 
 ---
 

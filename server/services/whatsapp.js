@@ -12,7 +12,9 @@
  *   SITE_URL           — base URL of the website (for links in messages)
  */
 
-const { Client, LocalAuth } = require('whatsapp-web.js');
+const { Client, RemoteAuth } = require('whatsapp-web.js');
+const { MongoStore } = require('wwebjs-mongo');
+const mongoose = require('mongoose');
 const QRCode = require('qrcode');
 const { execSync } = require('child_process');
 
@@ -137,7 +139,7 @@ function killOrphanedChromeProcesses() {
 function cleanStaleLocks() {
   const fs = require('fs');
   const path = require('path');
-  const lockDir = path.join(__dirname, '..', 'whatsapp-session', 'session');
+  const lockDir = path.join(__dirname, '..', '.wwebjs_auth', 'session');
   const lockFiles = ['SingletonLock', 'SingletonSocket', 'SingletonCookie'];
 
   lockFiles.forEach((file) => {
@@ -174,9 +176,18 @@ function initClient() {
 
   console.log('[WhatsApp] Initializing client...');
 
+  const store = new MongoStore({ mongoose: mongoose });
+
   client = new Client({
-    authStrategy: new LocalAuth({ dataPath: './whatsapp-session' }),
+    authStrategy: new RemoteAuth({
+      store: store,
+      backupSyncIntervalMs: 300000
+    }),
     puppeteer: getPuppeteerConfig(),
+  });
+  
+  client.on('remote_session_saved', () => {
+    console.log('[WhatsApp] ✅ Remote session saved to MongoDB.');
   });
 
   // ── Event handlers ──────────────────────────────────────────────────────

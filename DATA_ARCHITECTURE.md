@@ -1,20 +1,20 @@
-# Hindu QnA - Data Storage Architecture
+# Pariprashna - Data Storage Architecture
 
 ## System Overview
 
-Hindu QnA uses a cloud-based architecture with MongoDB Atlas as the primary database, Render for backend hosting, and Vercel for frontend hosting.
+Pariprashna uses a cloud-based architecture with MongoDB Atlas as the primary database, Render for backend hosting, and Vercel for frontend hosting.
 
 ---
 
 ## Database: MongoDB Atlas
 
 **Provider:** MongoDB Atlas (Cloud)
-**Database Name:** `hindu_qna`
+**Database Name:** `pariprashna`
 **Region:** Multi-region cluster
 
 ### Connection Details
 ```
-mongodb+srv://cluster0.zxaccpw.mongodb.net/hindu_qna
+mongodb+srv://<username>:<password>@<cluster>.mongodb.net/pariprashna
 ```
 
 ---
@@ -145,13 +145,13 @@ mongodb+srv://cluster0.zxaccpw.mongodb.net/hindu_qna
 ## External Services
 
 ### Render (Backend Hosting)
-- **URL:** https://hindu-qna.onrender.com
+- **URL:** `https://pariprashna-api.onrender.com` *(update with your actual Render URL)*
 - **Runtime:** Node.js
 - **Free tier:** Spins down after inactivity
 - **Environment variables stored:** MongoDB URI, JWT secret, API keys
 
 ### Vercel (Frontend Hosting)
-- **URL:** https://hindu-qna.vercel.app
+- **URL:** `https://pariprashna.vercel.app` *(update with your actual Vercel URL)*
 - **Framework:** React (Create React App)
 - **Environment variables stored:** REACT_APP_API_URL
 
@@ -165,7 +165,7 @@ mongodb+srv://cluster0.zxaccpw.mongodb.net/hindu_qna
 - **Used for:** Google login authentication
 
 ### GitHub
-- **Repository:** https://github.com/Shubhamk1017/hindu-qna
+- **Repository:** `https://github.com/<your-username>/Pariprashna`
 - **Used for:** Source code storage + auto-deploy
 
 ---
@@ -250,5 +250,5 @@ MongoDB Atlas provides:
 
 ---
 
-*Document generated for Hindu QnA project*
-*Last updated: May 2026*
+*Document generated for Pariprashna project*
+*Last updated: July 2026*
