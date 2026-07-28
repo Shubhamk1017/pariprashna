@@ -1,0 +1,307 @@
+import React, { useState } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
+import { FiHome, FiHelpCircle, FiUsers, FiBook, FiPlus, FiLogOut, FiMenu, FiX, FiShield, FiMessageSquare, FiSun, FiMoon, FiCommand, FiAlertCircle } from 'react-icons/fi';
+import toast from 'react-hot-toast';
+
+const Navbar = ({ onOpenPalette }) => {
+  const { user, logout } = useAuth();
+  const { dark, toggle } = useTheme();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+  const handleLogoutClick = () => {
+    setShowLogoutModal(true);
+  };
+
+  const confirmLogout = () => {
+    logout();
+    setShowLogoutModal(false);
+    toast.success('Logged out successfully');
+    navigate('/');
+  };
+
+  const isActive = (path) => location.pathname === path;
+
+  const navItems = [
+    { path: '/', label: 'Home', icon: FiHome },
+    { path: '/questions', label: 'Questions', icon: FiHelpCircle },
+    { path: '/users', label: 'Experts', icon: FiUsers },
+    { path: '/tags', label: 'Tags', icon: FiBook },
+    { path: '/chat', label: 'AI Chat', icon: FiMessageSquare },
+  ];
+
+  return (
+    <nav className="bg-white dark:bg-[#1C1814] border-b border-gray-200 dark:border-[#2A2520] sticky top-0 z-50 transition-colors duration-300">
+      <div className="max-w-[1200px] mx-auto px-6">
+        <div className="flex items-center h-14 gap-2">
+          {/* Logo */}
+          <Link to="/" className="flex items-center gap-2.5 mr-3">
+            <div className="w-8 h-8 bg-brand rounded-lg flex items-center justify-center flex-shrink-0">
+              <FiBook className="text-white" size={15} />
+            </div>
+            <span className="font-serif text-[16px] font-semibold text-gray-900 dark:text-gray-100">Pariprashna</span>
+          </Link>
+
+          {/* Desktop Nav */}
+          <div className="hidden md:flex items-center gap-0.5 flex-1">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[14px] transition-colors ${
+                    isActive(item.path)
+                      ? 'bg-brand-50 dark:bg-brand/10 text-brand border border-brand-100 dark:border-brand/20 font-medium'
+                      : 'text-gray-600 dark:text-gray-400 hover:bg-cream dark:hover:bg-[#2A2520] hover:text-gray-900 dark:hover:text-gray-200'
+                  }`}
+                >
+                  <Icon size={14} />
+                  {item.label}
+                </Link>
+              );
+            })}
+            {user && ['guru', 'acharya'].includes(user.role) && (
+              <Link
+                to="/guru"
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[14px] transition-colors ${
+                  isActive('/guru')
+                    ? 'bg-brand-50 dark:bg-brand/10 text-brand border border-brand-100 dark:border-brand/20 font-medium'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-cream dark:hover:bg-[#2A2520] hover:text-gray-900 dark:hover:text-gray-200'
+                }`}
+              >
+                <FiShield size={14} />
+                Guru Portal
+              </Link>
+            )}
+            {user && user.role === 'admin' && (
+              <Link
+                to="/admin"
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[14px] transition-colors ${
+                  isActive('/admin')
+                    ? 'bg-brand-50 dark:bg-brand/10 text-brand border border-brand-100 dark:border-brand/20 font-medium'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-cream dark:hover:bg-[#2A2520] hover:text-gray-900 dark:hover:text-gray-200'
+                }`}
+              >
+                <FiShield size={14} />
+                Admin
+              </Link>
+            )}
+          </div>
+
+          {/* Right side */}
+          <div className="flex items-center gap-1.5">
+            {/* Command Palette Toggle */}
+            <button
+              onClick={onOpenPalette}
+              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] text-gray-400 dark:text-gray-500 hover:bg-cream dark:hover:bg-[#2A2520] hover:text-gray-600 dark:hover:text-gray-300 transition-colors border border-transparent hover:border-gray-200 dark:hover:border-[#3A342E]"
+              title="Search (⌘K)"
+              aria-label="Open search command palette"
+            >
+              <FiCommand size={13} />
+              <kbd className="text-[10px] font-mono opacity-60 hidden lg:inline">⌘K</kbd>
+            </button>
+
+            {/* Dark Mode Toggle */}
+            <button
+              onClick={toggle}
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 dark:text-gray-500 hover:bg-cream dark:hover:bg-[#2A2520] hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+              title={dark ? 'Light Mode' : 'Dark Mode'}
+              aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              {dark ? <FiSun size={15} /> : <FiMoon size={15} />}
+            </button>
+
+            {user ? (
+              <>
+                <Link
+                  to="/questions/ask"
+                  className="hidden sm:flex items-center gap-1.5 bg-brand text-white px-4 py-[7px] rounded-lg text-[14px] font-medium hover:bg-brand-500 transition-colors"
+                >
+                  <FiPlus size={14} />
+                  Ask
+                </Link>
+                <Link
+                  to={`/profile/${user._id || user.id}`}
+                  className="w-8.5 h-8.5 rounded-full overflow-hidden flex items-center justify-center border border-brand/20 hover:border-brand transition-all flex-shrink-0"
+                  aria-label="User profile"
+                  title={user.name}
+                >
+                  {user.avatar ? (
+                    <img src={user.avatar} alt={user.name} className="w-8 h-8 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-8 h-8 bg-brand text-white rounded-full flex items-center justify-center text-[12px] font-semibold hover:bg-brand-500 transition-colors">
+                      {user.name?.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </Link>
+                <button
+                  onClick={handleLogoutClick}
+                  className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors hidden md:block"
+                  title="Logout"
+                  aria-label="Log out"
+                >
+                  <FiLogOut size={16} />
+                </button>
+              </>
+            ) : (
+              <Link
+                to="/login"
+                className="bg-brand text-white px-5 py-[7px] rounded-lg text-[14px] font-medium hover:bg-brand-500 transition-colors"
+              >
+                Login
+              </Link>
+            )}
+
+            {/* Mobile menu toggle */}
+            <button
+              onClick={() => setMobileOpen(!mobileOpen)}
+              className="md:hidden text-gray-600 dark:text-gray-400 ml-0.5"
+              aria-label="Toggle navigation menu"
+            >
+              {mobileOpen ? <FiX size={20} /> : <FiMenu size={20} />}
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile Nav */}
+        {mobileOpen && (
+          <div className="md:hidden pb-3 border-t border-gray-100 dark:border-[#2A2520] mt-1">
+            <div className="flex flex-col gap-0.5 pt-2">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    onClick={() => setMobileOpen(false)}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-[14px] ${
+                      isActive(item.path)
+                        ? 'bg-brand-50 dark:bg-brand/10 text-brand'
+                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-[#2A2520]'
+                    }`}
+                  >
+                    <Icon size={16} />
+                    {item.label}
+                  </Link>
+                );
+              })}
+
+              {user && (
+                <Link
+                  to={`/profile/${user._id || user.id}`}
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[14px] text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-[#2A2520]"
+                >
+                  {user.avatar ? (
+                    <img src={user.avatar} alt={user.name} className="w-5 h-5 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-5 h-5 rounded-full bg-brand text-white flex items-center justify-center text-[10px] font-bold">
+                      {user.name?.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  My Profile ({user.name})
+                </Link>
+              )}
+              
+              {/* Dark mode toggle in mobile */}
+              <button
+                onClick={() => { toggle(); setMobileOpen(false); }}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-[14px] text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-[#2A2520]"
+              >
+                {dark ? <FiSun size={16} /> : <FiMoon size={16} />}
+                {dark ? 'Light Mode' : 'Dark Mode'}
+              </button>
+
+              {/* Search in mobile */}
+              <button
+                onClick={() => { onOpenPalette(); setMobileOpen(false); }}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-[14px] text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-[#2A2520]"
+              >
+                <FiCommand size={16} />
+                Search (⌘K)
+              </button>
+
+              {user && (
+                <Link
+                  to="/questions/ask"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-[14px] font-medium text-brand"
+                >
+                  <FiPlus size={16} />
+                  Ask a Question
+                </Link>
+              )}
+              {user && ['guru', 'acharya'].includes(user.role) && (
+                <Link
+                  to="/guru"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-[14px] text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-[#2A2520]"
+                >
+                  <FiShield size={16} />
+                  Guru Portal
+                </Link>
+              )}
+              {user && user.role === 'admin' && (
+                <Link
+                  to="/admin"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-[14px] text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-[#2A2520]"
+                >
+                  <FiShield size={16} />
+                  Admin
+                </Link>
+              )}
+              {user && (
+                <button
+                  onClick={() => { setMobileOpen(false); handleLogoutClick(); }}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-[14px] text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30"
+                >
+                  <FiLogOut size={16} />
+                  Log Out
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-[#1C1814] border border-gray-100 dark:border-[#2A2520] rounded-2xl p-6 max-w-sm w-full shadow-2xl animate-fade-in-scale text-center">
+            <div className="w-12 h-12 rounded-2xl bg-brand/10 text-brand flex items-center justify-center mx-auto mb-4">
+              <FiAlertCircle size={24} />
+            </div>
+            <h3 className="font-serif text-[18px] font-bold text-gray-900 dark:text-gray-100 mb-1.5">
+              Confirm Log Out
+            </h3>
+            <p className="text-gray-500 dark:text-gray-400 text-[14px] mb-6 leading-relaxed">
+              Are you sure you want to log out of your Pariprashna account?
+            </p>
+            <div className="flex items-center justify-center gap-3">
+              <button
+                onClick={() => setShowLogoutModal(false)}
+                className="flex-1 py-2.5 px-4 rounded-xl text-[14px] font-medium border border-gray-200 dark:border-[#3A342E] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#2A2520] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmLogout}
+                className="flex-1 py-2.5 px-4 rounded-xl text-[14px] font-medium bg-brand text-white hover:bg-brand-500 transition-colors shadow-md shadow-brand/20"
+              >
+                Yes, Log Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </nav>
+  );
+};
+
+export default Navbar;

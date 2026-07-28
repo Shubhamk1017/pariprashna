@@ -1,0 +1,411 @@
+const express = require('express');
+const router = express.Router();
+const AIChat = require('../models/AIChat');
+const Question = require('../models/Question');
+const Answer = require('../models/Answer');
+const { auth } = require('../middleware/auth');
+const { searchVerses, verseLabel, buildVerseContext } = require('../utils/vedabase');
+
+let genAI;
+if (process.env.GEMINI_API_KEY) {
+  const { GoogleGenerativeAI } = require('@google/generative-ai');
+  genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+}
+
+let groq;
+if (process.env.GROQ_API_KEY) {
+  const Groq = require('groq-sdk');
+  groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+}
+
+// ─── System prompt ───────────────────────────────────────────────────────────
+const systemPrompt = `You are Pariprashna, a knowledgeable and compassionate Hindu scripture guide. You draw from vedabase.io scriptures — Bhagavad Gita, Srimad Bhagavatam, Caitanya-caritamrta, Isopanishad, Nectar of Instruction, and other Vedic texts.
+
+RESPONSE FORMAT:
+- Start with a direct, clear answer to the question
+- Then provide deeper explanation with scriptural backing
+- Use Sanskrit terms with English explanations
+- Cite specific verses inline as: **(BG 2.47)** or **(SB 1.1.1)**
+- Keep responses focused and well-structured
+
+FORMATTING RULES:
+- Use **bold** for key terms and verse references
+- Use bullet points or numbered lists for multiple points
+- Use > blockquotes for direct verse translations
+- Use ### headings to organize long responses
+- Keep paragraphs short (2-3 sentences max)
+
+IMPORTANT:
+- Only cite verses that are actually provided in the context
+- Do NOT fabricate verse references
+- Do NOT include "Recommended reading", "Further reading", or any reference lists at the end
+- Source links are shown automatically as clickable buttons below your response
+- If the scripture context doesn't fully answer the question, say so honestly`;
+
+// ─── Semantic search for related community questions ──────────────────────────
+async function semanticSearch(query, limit = 3) {
+  try {
+    const questions = await Question.find({
+      $or: [
+        { title: { $regex: query, $options: 'i' } },
+        { body: { $regex: query, $options: 'i' } },
+      ],
+    })
+      .populate('tags', 'name')
+      .limit(limit);
+
+    return questions;
+  } catch (error) {
+    console.error('Search error:', error);
+    return [];
+  }
+}
+
+// ─── Chat endpoint ───────────────────────────────────────────────────────────
+router.post('/chat', auth, async (req, res) => {
+  try {
+    const { message, sessionId } = req.body;
+
+    let chat = await AIChat.findOne({ sessionId });
+    if (!chat) {
+      chat = new AIChat({
+        user: req.user._id,
+        sessionId,
+        messages: [],
+      });
+    }
+
+    // Search scriptures for context (RAG)
+    const verses = await searchVerses(message, 3);
+    const verseContext = buildVerseContext(verses);
+
+    // Search community questions
+    const relatedQuestions = await semanticSearch(message, 3);
+
+    let communityContext = '';
+    if (relatedQuestions.length > 0) {
+      communityContext = '\n\nRelated questions from our community:\n';
+      relatedQuestions.forEach((q, i) => {
+        communityContext += `${i + 1}. ${q.title}\n`;
+      });
+    }
+
+    // Build source info for frontend display
+    const sources = verses.map(v => ({
+      reference: verseLabel(v),
+      translation: v.translation ? v.translation.substring(0, 200) : '',
+      url: v.url || '',
+    }));
+
+    chat.messages.push({ role: 'user', content: message });
+
+    let assistantMessage;
+
+    // Build messages
+    const fullSystemPrompt = systemPrompt + verseContext + communityContext;
+    const messages = [
+      { role: 'system', content: fullSystemPrompt },
+      ...chat.messages.slice(-6).map((m) => ({ role: m.role, content: m.content })),
+    ];
+
+    // Try Groq first
+    if (groq && process.env.GROQ_API_KEY) {
+      try {
+        const completion = await groq.chat.completions.create({
+          messages,
+          model: 'llama-3.1-8b-instant',
+          max_tokens: 2000,
+          temperature: 0.7,
+        });
+        assistantMessage = completion.choices[0].message.content;
+      } catch (groqError) {
+        console.error('Groq API error:', groqError.message);
+        console.error('Groq error details:', JSON.stringify(groqError, null, 2));
+      }
+    }
+
+    // Fallback to Gemini
+    if (!assistantMessage && genAI && process.env.GEMINI_API_KEY) {
+      try {
+        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+        const chatHistory = chat.messages.slice(-6).map((msg) => ({
+          role: msg.role === 'assistant' ? 'model' : 'user',
+          parts: [{ text: msg.content }],
+        }));
+        const chatSession = model.startChat({
+          history: [
+            { role: 'user', parts: [{ text: 'You are a Hinduism expert.' }] },
+            { role: 'model', parts: [{ text: 'Ready to answer Hinduism questions.' }] },
+            ...chatHistory,
+          ],
+          generationConfig: { maxOutputTokens: 4000, temperature: 0.7 },
+        });
+        const result = await chatSession.sendMessage(
+          systemPrompt + verseContext + communityContext + '\n\nUser question: ' + message
+        );
+        assistantMessage = result.response.text();
+      } catch (geminiError) {
+        console.error('Gemini API error:', geminiError.message);
+        console.error('Gemini error details:', JSON.stringify(geminiError, null, 2));
+      }
+    }
+
+    // Fallback message
+    if (!assistantMessage) {
+      assistantMessage = `Thank you for your question about "${message}". The AI assistant is temporarily unavailable. Please try again later or search the existing questions on the platform.`;
+    }
+
+    // Clean up: remove fake links, invented references, and reading recommendation blocks
+    // (references are returned separately as sources buttons)
+    assistantMessage = assistantMessage
+      .replace(/https?:\/\/[^\s)]*/g, '')
+      .replace(/en\/library\/[^\s)]+/g, '')
+      .replace(/\[.*?\]\(.*?\)/g, '')
+      .replace(/(?:^|\n)(?:Sources?|References?|Recommended reading|Further reading|To learn more|You can also read|For deeper|Please read the full purport):?[\s\S]*$/gim, '')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+
+    chat.messages.push({
+      role: 'assistant',
+      content: assistantMessage,
+      sources: sources || [],
+      feedback: null,
+    });
+    chat.context = { relatedQuestions: relatedQuestions.map((q) => q._id) };
+
+    // Set preview from first user message if not set
+    if (!chat.preview) {
+      const firstUserMsg = chat.messages.find(m => m.role === 'user');
+      if (firstUserMsg) {
+        chat.preview = firstUserMsg.content.substring(0, 100);
+      }
+    }
+
+    await chat.save();
+
+    res.json({
+      message: assistantMessage,
+      sources: sources || [],
+      relatedQuestions,
+      sessionId: chat.sessionId
+    });
+  } catch (error) {
+    console.error('AI chat error:', error);
+    res.status(500).json({ message: 'AI service error' });
+  }
+});
+
+// ─── Chat history ────────────────────────────────────────────────────────────
+router.get('/history/:sessionId', auth, async (req, res) => {
+  try {
+    const chat = await AIChat.findOne({
+      sessionId: req.params.sessionId,
+      user: req.user._id,
+    });
+
+    if (!chat) {
+      return res.json({ messages: [] });
+    }
+
+    res.json({ messages: chat.messages });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// ─── Chat sessions ───────────────────────────────────────────────────────────
+router.get('/sessions', auth, async (req, res) => {
+  try {
+    const sessions = await AIChat.find({ user: req.user._id })
+      .select('sessionId createdAt preview')
+      .sort({ createdAt: -1 });
+
+    res.json(sessions);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// ─── Feedback on message ─────────────────────────────────────────────────────
+router.post('/feedback/:sessionId/:messageIndex', auth, async (req, res) => {
+  try {
+    const { sessionId, messageIndex } = req.params;
+    const { feedback } = req.body; // 'helpful' or 'unhelpful'
+
+    const chat = await AIChat.findOne({ sessionId, user: req.user._id });
+    if (!chat) return res.status(404).json({ message: 'Session not found' });
+
+    const idx = parseInt(messageIndex);
+    if (idx < 0 || idx >= chat.messages.length) {
+      return res.status(400).json({ message: 'Invalid message index' });
+    }
+
+    if (chat.messages[idx].role !== 'assistant') {
+      return res.status(400).json({ message: 'Can only provide feedback on assistant messages' });
+    }
+
+    chat.messages[idx].feedback = feedback;
+    await chat.save();
+
+    res.json({ message: 'Feedback recorded' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// ─── Delete session ──────────────────────────────────────────────────────────
+router.delete('/sessions/:sessionId', auth, async (req, res) => {
+  try {
+    await AIChat.findOneAndDelete({
+      sessionId: req.params.sessionId,
+      user: req.user._id,
+    });
+
+    res.json({ message: 'Session deleted' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// ─── Suggest tags for a question ─────────────────────────────────────────────
+const Tag = require('../models/Tag');
+const User = require('../models/User');
+
+router.post('/suggest-tags', auth, async (req, res) => {
+  try {
+    const { title, body } = req.body;
+    const text = `${title} ${body || ''}`.toLowerCase();
+
+    // Fetch existing tags
+    const existingTags = await Tag.find().select('name').lean();
+    const tagNames = existingTags.map(t => t.name);
+
+    // Keyword mapping to tags
+    const keywordMap = {
+      'bhagavad gita': 'bhagavad-gita', 'gita': 'bhagavad-gita', 'krishna': 'bhagavad-gita', 'arjuna': 'bhagavad-gita',
+      'bhagavatam': 'srimad-bhagavatam', 'srimad': 'srimad-bhagavatam', 'bhagavat': 'srimad-bhagavatam',
+      'vedanta': 'vedanta', 'brahman': 'vedanta', 'atman': 'vedanta', 'advaita': 'vedanta',
+      'dharma': 'dharma', 'duty': 'dharma', 'righteousness': 'dharma',
+      'karma': 'karma', 'action': 'karma', 'deed': 'karma',
+      'yoga': 'yoga', 'meditation': 'yoga', 'union': 'yoga', 'practice': 'yoga',
+      'mantra': 'mantras', 'chanting': 'mantras', 'japa': 'mantras', 'om': 'mantras',
+      'vedas': 'vedas', 'rig veda': 'vedas', 'sama veda': 'vedas', 'yajur veda': 'vedas',
+      'upanishad': 'upanishads', 'upanishads': 'upanishads',
+      'purana': 'puranas', 'puranas': 'puranas',
+      'avatar': 'avatar', 'incarnation': 'avatar', 'vishnu': 'avatar', 'rama': 'avatar',
+      'devotion': 'bhakti', 'bhakti': 'bhakti', 'love': 'bhakti', 'surrender': 'bhakti',
+      'liberation': 'moksha', 'moksha': 'moksha', 'salvation': 'moksha', 'freedom': 'moksha',
+      'vedic': 'vedic-philosophy', 'philosophy': 'vedic-philosophy',
+      'ritual': 'rituals', 'puja': 'rituals', 'ceremony': 'rituals',
+      'isopanishad': 'isopanishad', 'isopanishad': 'isopanishad',
+      'nectar of instruction': 'nectar-of-instruction', 'noi': 'nectar-of-instruction',
+    };
+
+    // Match keywords to suggested tags
+    const matched = new Set();
+    for (const [keyword, tag] of Object.entries(keywordMap)) {
+      if (text.includes(keyword)) matched.add(tag);
+    }
+
+    // Also match existing tags directly
+    for (const tagName of tagNames) {
+      if (text.includes(tagName)) matched.add(tagName);
+    }
+
+    // If no matches, suggest general tags
+    if (matched.size === 0) {
+      matched.add('hinduism');
+    }
+
+    // Get full tag objects for matched tags
+    const suggestedTags = await Tag.find({
+      name: { $in: Array.from(matched) }
+    }).select('name').lean();
+
+    // Also suggest top tags as fallback
+    const topTags = await Tag.find()
+      .sort({ count: -1 })
+      .limit(5)
+      .select('name')
+      .lean();
+
+    res.json({
+      suggested: suggestedTags.map(t => t.name),
+      all: topTags.map(t => t.name),
+    });
+  } catch (error) {
+    console.error('Tag suggestion error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// ─── Post question to community from chat ────────────────────────────────────
+router.post('/post-to-community', auth, async (req, res) => {
+  try {
+    const { title, body, tags, chatContext } = req.body;
+
+    if (!title || title.trim().length < 15) {
+      return res.status(400).json({ message: 'Title must be at least 15 characters' });
+    }
+
+    // Build body with chat context reference
+    let questionBody = body || '';
+    if (chatContext) {
+      questionBody += `\n\n---\n*This question was explored with the AI Scripture Assistant. The community's verified scholars can provide deeper insights.*`;
+    }
+
+    // Find or create tags
+    const tagIds = [];
+    const tagNames = tags && tags.length > 0 ? tags : ['hinduism'];
+    for (const tagName of tagNames) {
+      let tag = await Tag.findOne({ name: tagName.toLowerCase().trim() });
+      if (!tag) {
+        tag = new Tag({ name: tagName.toLowerCase().trim() });
+        await tag.save();
+      }
+      tag.count = (tag.count || 0) + 1;
+      await tag.save();
+      tagIds.push(tag._id);
+    }
+
+    const question = new Question({
+      title: title.trim(),
+      body: questionBody.trim(),
+      author: req.user._id,
+      tags: tagIds,
+    });
+
+    await question.save();
+
+    // Create AI answer from chat context so it's visible on the question
+    if (chatContext) {
+      const aiAnswer = new Answer({
+        body: chatContext,
+        author: req.user._id,
+        question: question._id,
+        isAIGenerated: true,
+        aiModel: 'chat-context',
+        isVerifiedByAdmin: false,
+      });
+      await aiAnswer.save();
+
+      question.answers.push(aiAnswer._id);
+      await question.save();
+    }
+
+    // Update user
+    req.user.questions.push(question._id);
+    req.user.reputation = (req.user.reputation || 0) + 5;
+    await req.user.save();
+
+    res.status(201).json({
+      question,
+      message: 'Question posted to the community!',
+    });
+  } catch (error) {
+    console.error('Post to community error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+module.exports = router;

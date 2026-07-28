@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Hindu QnA - Data Storage Architecture</title>
+<style>
+  body { font-family: Arial, sans-serif; max-width: 900px; margin: 40px auto; padding: 20px; color: #333; line-height: 1.6; }
+  h1 { color: #ea580c; border-bottom: 3px solid #ea580c; padding-bottom: 10px; }
+  h2 { color: #ea580c; margin-top: 30px; }
+  h3 { color: #555; }
+  table { border-collapse: collapse; width: 100%; margin: 15px 0; }
+  th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+  th { background-color: #ea580c; color: white; }
+  tr:nth-child(even) { background-color: #f9f9f9; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; }
+  .green { background: #d4edda; color: #155724; }
+  .blue { background: #cce5ff; color: #004085; }
+  .orange { background: #fff3cd; color: #856404; }
+  .red { background: #f8d7da; color: #721c24; }
+  code { background: #f4f4f4; padding: 2px 6px; border-radius: 4px; font-size: 14px; }
+  pre { background: #f4f4f4; padding: 15px; border-radius: 8px; overflow-x: auto; }
+  .flow-box { background: #f8f9fa; border-left: 4px solid #ea580c; padding: 15px; margin: 10px 0; }
+  .footer { margin-top: 40px; padding-top: 20px; border-top: 2px solid #eee; color: #666; font-size: 14px; }
+</style>
+</head>
+<body>
+
+<h1>Hindu QnA - Data Storage Architecture</h1>
+<p><strong>Document Version:</strong> 1.0 | <strong>Last Updated:</strong> May 2026</p>
+
+<h2>System Overview</h2>
+<p>Hindu QnA uses a cloud-based architecture with the following components:</p>
+<table>
+  <tr><th>Component</th><th>Service</th><th>Purpose</th></tr>
+  <tr><td>Database</td><td><strong>MongoDB Atlas</strong></td><td>Cloud database for all application data</td></tr>
+  <tr><td>Backend</td><td><strong>Render</strong></td><td>Node.js API server hosting</td></tr>
+  <tr><td>Frontend</td><td><strong>Vercel</strong></td><td>React application hosting</td></tr>
+  <tr><td>AI Engine</td><td><strong>Groq</strong></td><td>LLM inference for AI chatbot</td></tr>
+  <tr><td>Auth</td><td><strong>Google Cloud</strong></td><td>Google OAuth login</td></tr>
+  <tr><td>Code</td><td><strong>GitHub</strong></td><td>Source code + auto-deploy</td></tr>
+</table>
+
+<h2>Database: MongoDB Atlas</h2>
+<pre>
+mongodb+srv://cluster0.zxaccpw.mongodb.net/hindu_qna
+</pre>
+<p><strong>Database Name:</strong> <code>hindu_qna</code></p>
+
+<h2>Collections (7 Tables)</h2>
+
+<h3>1. users</h3>
+<table>
+  <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+  <tr><td>_id</td><td>ObjectId</td><td>Unique user ID</td></tr>
+  <tr><td>name</td><td>String</td><td>Display name</td></tr>
+  <tr><td>email</td><td>String</td><td>Email address (unique)</td></tr>
+  <tr><td>password</td><td>String</td><td>Hashed password (bcrypt)</td></tr>
+  <tr><td>avatar</td><td>String</td><td>Profile picture URL</td></tr>
+  <tr><td>role</td><td>Enum</td><td><span class="green">user</span> <span class="blue">scholar</span> <span class="orange">guru</span> <span class="red">admin</span></td></tr>
+  <tr><td>provider</td><td>Enum</td><td>local / google / github</td></tr>
+  <tr><td>reputation</td><td>Number</td><td>Points earned from voting</td></tr>
+  <tr><td>badges</td><td>Array</td><td>{name, type: bronze/silver/gold}</td></tr>
+</table>
+
+<h3>2. questions</h3>
+<table>
+  <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+  <tr><td>_id</td><td>ObjectId</td><td>Unique question ID</td></tr>
+  <tr><td>title</td><td>String</td><td>Question title (15-300 chars)</td></tr>
+  <tr><td>body</td><td>String</td><td>Question body (Markdown)</td></tr>
+  <tr><td>author</td><td>ObjectId</td><td>Reference to users</td></tr>
+  <tr><td>tags</td><td>Array[ObjectId]</td><td>References to tags</td></tr>
+  <tr><td>upvotes/downvotes</td><td>Array[ObjectId]</td><td>Voters</td></tr>
+  <tr><td>views</td><td>Number</td><td>View count</td></tr>
+  <tr><td>isBounty</td><td>Boolean</td><td>Bounty active status</td></tr>
+  <tr><td>bountyAmount</td><td>Number</td><td>Reputation offered</td></tr>
+  <tr><td>acceptedAnswer</td><td>ObjectId</td><td>Best answer reference</td></tr>
+</table>
+
+<h3>3. answers</h3>
+<table>
+  <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+  <tr><td>_id</td><td>ObjectId</td><td>Unique answer ID</td></tr>
+  <tr><td>body</td><td>String</td><td>Answer body (Markdown)</td></tr>
+  <tr><td>author</td><td>ObjectId</td><td>Reference to users</td></tr>
+  <tr><td>question</td><td>ObjectId</td><td>Reference to questions</td></tr>
+  <tr><td>isAIGenerated</td><td>Boolean</td><td>Whether AI generated this answer</td></tr>
+  <tr><td>isVerifiedByAdmin</td><td>Boolean</td><td>Admin verification status</td></tr>
+  <tr><td>isVerifiedByGuru</td><td>Boolean</td><td>Guru verification status</td></tr>
+  <tr><td>isAccepted</td><td>Boolean</td><td>Accepted answer status</td></tr>
+</table>
+
+<h3>4. comments</h3>
+<table>
+  <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+  <tr><td>body</td><td>String</td><td>Comment text (max 500 chars)</td></tr>
+  <tr><td>author</td><td>ObjectId</td><td>Reference to users</td></tr>
+  <tr><td>post</td><td>ObjectId</td><td>Reference to question or answer</td></tr>
+  <tr><td>postModel</td><td>String</td><td>"Question" or "Answer"</td></tr>
+</table>
+
+<h3>5. tags</h3>
+<table>
+  <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+  <tr><td>name</td><td>String</td><td>Tag name (unique, lowercase)</td></tr>
+  <tr><td>description</td><td>String</td><td>Tag description</td></tr>
+  <tr><td>count</td><td>Number</td><td>Questions using this tag</td></tr>
+</table>
+
+<h3>6. reviews</h3>
+<table>
+  <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+  <tr><td>type</td><td>Enum</td><td>first_question / first_answer / late_answer</td></tr>
+  <tr><td>post</td><td>ObjectId</td><td>Reference to question or answer</td></tr>
+  <tr><td>status</td><td>Enum</td><td>pending / approved / rejected</td></tr>
+</table>
+
+<h3>7. aichats</h3>
+<table>
+  <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+  <tr><td>user</td><td>ObjectId</td><td>Reference to users</td></tr>
+  <tr><td>sessionId</td><td>String</td><td>Frontend session identifier</td></tr>
+  <tr><td>messages</td><td>Array</td><td>[{role, content, timestamp}]</td></tr>
+</table>
+
+<h2>Data Flow Diagrams</h2>
+
+<h3>User Registration</h3>
+<div class="flow-box">
+  User → Frontend → Backend API → MongoDB (users collection) → JWT token returned
+</div>
+
+<h3>Asking a Question</h3>
+<div class="flow-box">
+  User → Frontend → Backend API → MongoDB (questions collection)<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→ Background: AI generates answer via Groq API<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→ MongoDB (answers collection, isAIGenerated: true)
+</div>
+
+<h3>AI Chat</h3>
+<div class="flow-box">
+  User → Frontend → Backend API → Groq API → Response with real shlokas from vedabase.io<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→ MongoDB (aichats collection stores history)
+</div>
+
+<h3>Guru Verification</h3>
+<div class="flow-box">
+  Guru → Guru Portal → Backend API → MongoDB (answers.isVerifiedByAdmin: true)<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→ Answer now visible to all users
+</div>
+
+<h2>External Service Limits</h2>
+<table>
+  <tr><th>Service</th><th>Free Limit</th><th>Current Usage</th></tr>
+  <tr><td>MongoDB Atlas</td><td>512 MB storage</td><td>~5 MB</td></tr>
+  <tr><td>Render</td><td>512 MB RAM, spins down</td><td>Running</td></tr>
+  <tr><td>Vercel</td><td>100 GB bandwidth/month</td><td>Active</td></tr>
+  <tr><td>Groq</td><td>14,400 requests/day</td><td>~500/day</td></tr>
+</table>
+
+<h2>Security Measures</h2>
+<table>
+  <tr><th>Measure</th><th>Implementation</th></tr>
+  <tr><td>Password hashing</td><td>bcryptjs</td></tr>
+  <tr><td>JWT tokens</td><td>7-day expiry</td></tr>
+  <tr><td>CORS</td><td>Configured for frontend domain</td></tr>
+  <tr><td>API auth</td><td>Bearer token in headers</td></tr>
+  <tr><td>Role-based access</td><td>middleware/auth.js</td></tr>
+  <tr><td>Input validation</td><td>express-validator</td></tr>
+</table>
+
+<div class="footer">
+  <p><strong>Hindu QnA</strong> - Data Storage Architecture Document</p>
+  <p>Generated: May 2026 | Repository: https://github.com/Shubhamk1017/hindu-qna</p>
+</div>
+
+</body>
+</html>

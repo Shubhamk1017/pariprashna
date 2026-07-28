@@ -1,0 +1,19 @@
+node_modules/
+.env
+.env.local
+.env.example
+client/build/
+.DS_Store
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+
+# WhatsApp session (auth credentials - DO NOT COMMIT)
+server/whatsapp-session/
+server/.wwebjs_cache/
+server/whatsapp-qr.png
