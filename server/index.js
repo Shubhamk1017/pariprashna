@@ -6,6 +6,7 @@ const session = require('express-session');
 const passport = require('./config/passport');
 
 const app = express();
+app.set('trust proxy', 1);
 
 // Security: Validate required environment variables
 const requiredEnvVars = ['MONGODB_URI', 'JWT_SECRET'];

@@ -66,17 +66,6 @@ function getPuppeteerConfig() {
     config.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
     console.log('[WhatsApp] Using custom Chrome path from PUPPETEER_EXECUTABLE_PATH:', config.executablePath);
   }
-  // 2. Production (Render/Linux): use @sparticuz/chromium
-  else if (isProduction) {
-    try {
-      const chromium = require('@sparticuz/chromium');
-      config.executablePath = chromium.executablePath;
-      config.args = chromium.args.concat(config.args);
-      console.log('[WhatsApp] Using @sparticuz/chromium for production');
-    } catch (err) {
-      console.error('[WhatsApp] @sparticuz/chromium not found, using bundled puppeteer');
-    }
-  }
   // 3. Windows local Chrome auto-detection
   else if (isWindows) {
     const winPaths = [
