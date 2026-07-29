@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import api from '../utils/api';
+import { useQuestions, usePublicStats, useDailyShloka, useRecentActivity } from '../hooks/useQueries';
 import QuestionCard from '../components/QuestionCard';
 import TopExperts from '../components/TopExperts';
 import RecentActivity from '../components/RecentActivity';
@@ -167,42 +167,27 @@ function RevealSection({ children, className = '', delay = 0 }) {
 
 const Home = () => {
   const { user } = useAuth();
-  const [stats, setStats] = useState({ questions: 0, users: 0, answers: 0, tags: 0 });
-  const [hotQuestions, setHotQuestions] = useState([]);
-  const [recentAnswers, setRecentAnswers] = useState([]);
-  const [dailyShloka, setDailyShloka] = useState(FALLBACK_SHLOKA);
+  const { data: stats = { questions: 0, users: 0, answers: 0, verifiedAnswers: 0, experts: 0 } } = usePublicStats();
+  const { data: questionsData, isLoading: loadingQuestions } = useQuestions({ sort: 'views', limit: 5 });
+  const { data: fetchedDailyShloka } = useDailyShloka();
+  const { data: activityData = [] } = useRecentActivity(8);
+
+  const hotQuestions = questionsData?.questions || [];
+  const recentAnswers = activityData.filter(a => a.type === 'answer').slice(0, 4);
+  
+  const activeShlokaList = useMemo(() => {
+    if (fetchedDailyShloka?.sanskrit && !SHLOKA_LIST.some(s => s.sanskrit === fetchedDailyShloka.sanskrit)) {
+      return [fetchedDailyShloka, ...SHLOKA_LIST];
+    }
+    return SHLOKA_LIST;
+  }, [fetchedDailyShloka]);
+
+  const [dailyShloka, setDailyShloka] = useState(activeShlokaList[0]);
   const [shlokaIndex, setShlokaIndex] = useState(0);
   const [shlokaFading, setShlokaFading] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const loading = loadingQuestions;
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [statsRes, questionsRes, shlokaRes, activityRes] = await Promise.all([
-          api.get('/admin/public-stats'),
-          api.get('/questions?sort=views&limit=5'),
-          api.get('/admin/daily-shloka').catch(() => ({ data: null })),
-          api.get('/activity?limit=8').catch(() => ({ data: { activities: [] } }))
-        ]);
-        setStats(statsRes.data);
-        setHotQuestions(questionsRes.data.questions || []);
-        if (shlokaRes.data) {
-          // If API returns a shloka, add it to the rotation list
-          const apiShloka = shlokaRes.data;
-          if (apiShloka.sanskrit && !SHLOKA_LIST.some(s => s.sanskrit === apiShloka.sanskrit)) {
-            SHLOKA_LIST.unshift(apiShloka);
-          }
-          setDailyShloka(SHLOKA_LIST[0]);
-        }
-        const activities = activityRes.data.activities || [];
-        setRecentAnswers(activities.filter(a => a.type === 'answer').slice(0, 4));
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      }
-      setLoading(false);
-    };
-    fetchData();
-  }, []);
+
 
   // Auto-rotate shlokas
   useEffect(() => {
@@ -210,8 +195,8 @@ const Home = () => {
       setShlokaFading(true);
       setTimeout(() => {
         setShlokaIndex(prev => {
-          const next = (prev + 1) % SHLOKA_LIST.length;
-          setDailyShloka(SHLOKA_LIST[next]);
+          const next = (prev + 1) % activeShlokaList.length;
+          setDailyShloka(activeShlokaList[next]);
           return next;
         });
         setShlokaFading(false);
@@ -224,8 +209,8 @@ const Home = () => {
     setShlokaFading(true);
     setTimeout(() => {
       setShlokaIndex(prev => {
-        const next = (prev + 1) % SHLOKA_LIST.length;
-        setDailyShloka(SHLOKA_LIST[next]);
+        const next = (prev + 1) % activeShlokaList.length;
+        setDailyShloka(activeShlokaList[next]);
         return next;
       });
       setShlokaFading(false);

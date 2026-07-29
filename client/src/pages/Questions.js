@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import QuestionCard from '../components/QuestionCard';
 import TopExperts from '../components/TopExperts';
 import RecentActivity from '../components/RecentActivity';
+import { useQuestions } from '../hooks/useQueries';
 import { FiSearch, FiClock, FiTrendingUp, FiMessageSquare, FiGrid, FiList, FiX, FiFilter, FiArrowUp, FiCheckCircle, FiAlertCircle, FiStar } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 
@@ -23,9 +24,6 @@ const FILTER_TABS = [
 const Questions = () => {
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [allQuestions, setAllQuestions] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [pagination, setPagination] = useState({ page: 1, totalPages: 1 });
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -53,8 +51,18 @@ const Questions = () => {
 
   const currentSort = sortBy;
 
+  const { data: questionsData, isLoading: loading } = useQuestions({
+    page: 1, // Add proper pagination state later if needed
+    limit: 100,
+    sort: currentSort,
+    tag: selectedTag,
+    search: debouncedSearch
+  });
+
+  const allQuestions = questionsData?.questions || [];
+  const pagination = { page: questionsData?.currentPage || 1, totalPages: questionsData?.totalPages || 1 };
+
   useEffect(() => {
-    fetchQuestions();
     fetchTags();
     if (user) fetchFavorites();
   }, [searchParams, user]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -86,18 +94,6 @@ const Questions = () => {
     return () => el.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const fetchQuestions = async () => {
-    setLoading(true);
-    try {
-      const res = await api.get(`/questions?page=${pagination.page}&sort=${currentSort}`);
-      setAllQuestions(res.data.questions);
-      setPagination({ page: res.data.currentPage, totalPages: res.data.totalPages });
-    } catch (error) {
-      console.error('Error fetching questions:', error);
-    }
-    setLoading(false);
-  };
-
   const fetchTags = async () => {
     try {
       const res = await api.get('/tags');
@@ -116,24 +112,6 @@ const Questions = () => {
       toast.error('Error updating bookmark');
     }
   };
-
-  const filtered = allQuestions.filter(q => {
-    const matchFilter = filter === 'all' ||
-      (filter === 'answered' && q.answers?.length > 0) ||
-      (filter === 'unanswered' && (!q.answers || q.answers.length === 0));
-    const matchSearch = !debouncedSearch ||
-      q.title.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-      q.body?.toLowerCase().includes(debouncedSearch.toLowerCase());
-    const matchTag = !selectedTag ||
-      q.tags?.some(t => (t.name || t) === selectedTag);
-    return matchFilter && matchSearch && matchTag;
-  });
-
-  const filterCounts = useMemo(() => ({
-    all: allQuestions.length,
-    answered: allQuestions.filter(q => q.answers?.length > 0).length,
-    unanswered: allQuestions.filter(q => !q.answers || q.answers.length === 0).length,
-  }), [allQuestions]);
 
   const handleSortChange = (newSort) => {
     setSortBy(newSort);
@@ -175,7 +153,7 @@ const Questions = () => {
             Questions
           </h1>
           <p className="text-[15px] text-gray-400 mt-2 tracking-wide">
-            {filtered.length} question{filtered.length !== 1 ? 's' : ''}
+            {questionsData?.totalQuestions || 0} question{questionsData?.totalQuestions !== 1 ? 's' : ''}
             {selectedTag && (
               <span className="inline-flex items-center gap-1 ml-2">
                 <span className="text-gray-300">·</span>
@@ -245,7 +223,7 @@ const Questions = () => {
                 <FiMessageSquare size={16} />
               </div>
               <div>
-                <div className="text-[18px] font-bold text-gray-900 leading-none">{allQuestions.length}</div>
+                <div className="text-[18px] font-bold text-gray-900 leading-none">{questionsData?.totalQuestions || 0}</div>
                 <div className="text-[12px] text-gray-400 mt-0.5">Total</div>
               </div>
             </div>
@@ -254,7 +232,7 @@ const Questions = () => {
                 <FiCheckCircle size={16} />
               </div>
               <div>
-                <div className="text-[18px] font-bold text-gray-900 leading-none">{filterCounts.answered}</div>
+                <div className="text-[18px] font-bold text-gray-900 leading-none">-</div>
                 <div className="text-[12px] text-gray-400 mt-0.5">Answered</div>
               </div>
             </div>
@@ -263,7 +241,7 @@ const Questions = () => {
                 <FiAlertCircle size={16} />
               </div>
               <div>
-                <div className="text-[18px] font-bold text-gray-900 leading-none">{filterCounts.unanswered}</div>
+                <div className="text-[18px] font-bold text-gray-900 leading-none">-</div>
                 <div className="text-[12px] text-gray-400 mt-0.5">Unanswered</div>
               </div>
             </div>
@@ -330,23 +308,6 @@ const Questions = () => {
 
             {/* Filter Tabs + View Toggle */}
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-1">
-                {FILTER_TABS.map(([v, l]) => (
-                  <button
-                    key={v}
-                    onClick={() => setFilter(v)}
-                    className={`px-3 py-1.5 rounded-lg text-[14px] font-medium transition-all duration-300 ${
-                      filter === v
-                        ? 'text-gray-900 bg-gray-100/80'
-                        : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
-                    }`}
-                  >
-                    {l}
-                    <span className="ml-1 text-[12px] text-gray-300">{filterCounts[v]}</span>
-                  </button>
-                ))}
-              </div>
-
               <div className="hidden sm:flex items-center border border-gray-200/80 rounded-lg p-0.5">
                 <button
                   onClick={() => setViewMode('list')}
@@ -392,7 +353,7 @@ const Questions = () => {
                 </div>
               ))}
             </div>
-          ) : filtered.length === 0 ? (
+          ) : allQuestions.length === 0 ? (
             <div className="text-center py-24 bg-white border border-gray-100 rounded-xl animate-fade-in-up">
               <div className="w-18 h-18 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-brand/5 to-brand/10 flex items-center justify-center">
                 <FiSearch size={28} className="text-brand/40" />
@@ -423,7 +384,7 @@ const Questions = () => {
             </div>
           ) : (
             <div className={viewMode === 'compact' ? 'grid grid-cols-1 sm:grid-cols-2 gap-4' : 'flex flex-col gap-4'}>
-              {filtered.map((question, idx) => (
+              {allQuestions.map((question, idx) => (
                 <div
                   key={question._id}
                   className="animate-fade-in-scale"

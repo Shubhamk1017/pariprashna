@@ -134,23 +134,26 @@ router.get('/', async (req, res) => {
       }
     }
     
+    let projection = {};
     if (search) {
-      query.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { body: { $regex: search, $options: 'i' } }
-      ];
+      query.$text = { $search: search };
+      projection = { score: { $meta: "textScore" } };
     }
 
     let sortOption = { createdAt: -1 };
-    if (sort === 'votes') sortOption = { upvotes: -1 };
-    if (sort === 'views') sortOption = { views: -1 };
+    if (search) {
+      sortOption = { score: { $meta: "textScore" } };
+    } else {
+      if (sort === 'votes') sortOption = { upvotes: -1 };
+      if (sort === 'views') sortOption = { views: -1 };
+    }
     if (sort === 'unverified') {
       // Find questions that have unverified AI answers
       const unverifiedAnswers = await Answer.find({ isAIGenerated: true, isVerifiedByAdmin: false }).distinct('question');
       query._id = { $in: unverifiedAnswers };
     }
 
-    const questions = await Question.find(query)
+    const questions = await Question.find(query, projection)
       .populate('author', 'name avatar reputation')
       .populate('tags', 'name')
       .sort(sortOption)

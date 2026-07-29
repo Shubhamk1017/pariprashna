@@ -1,5 +1,6 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { Toaster } from 'react-hot-toast';
@@ -43,6 +44,15 @@ const PageLoader = () => (
   </div>
 );
 
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false, // Don't refetch on window focus for standard users
+      staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
+    },
+  },
+});
+
 function App() {
   const [paletteOpen, setPaletteOpen] = useState(false);
 
@@ -60,8 +70,9 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <ThemeProvider>
-        <AuthProvider>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <AuthProvider>
           <Router>
             <div className="min-h-screen bg-cream dark:bg-[#141110] transition-colors duration-300">
               <Navbar onOpenPalette={() => setPaletteOpen(true)} />
@@ -96,6 +107,7 @@ function App() {
           </Router>
         </AuthProvider>
       </ThemeProvider>
+      </QueryClientProvider>
     </ErrorBoundary>
   );
 }

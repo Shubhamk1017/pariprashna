@@ -101,6 +101,18 @@ questionSchema.index({ author: 1 });
 questionSchema.index({ tags: 1 });
 questionSchema.index({ createdAt: -1 });
 
+// Text index for optimized search
+questionSchema.index({
+  title: 'text',
+  body: 'text'
+}, {
+  weights: {
+    title: 5,
+    body: 1
+  },
+  name: "TextSearchIndex"
+});
+
 questionSchema.set('toJSON', { virtuals: true });
 
 module.exports = mongoose.model('Question', questionSchema);

@@ -1,40 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import api from '../utils/api';
 import { formatDistanceToNow } from 'date-fns';
 import { FiMessageSquare, FiHelpCircle, FiCheck } from 'react-icons/fi';
+import { useRecentActivity } from '../hooks/useQueries';
 
 const RecentActivity = () => {
-  const [activities, setActivities] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data: activities = [], isLoading: loading } = useRecentActivity(6);
 
-  useEffect(() => {
-    const fetchActivity = async () => {
-      try {
-        const res = await api.get('/activity?limit=6');
-        setActivities(res.data.activities || []);
-      } catch {
-        // Fallback: fetch recent questions if activity endpoint isn't available
-        try {
-          const res = await api.get('/questions?sort=newest&limit=6');
-          const questions = res.data.questions || [];
-          setActivities(questions.map(q => ({
-            type: 'question',
-            _id: q._id,
-            title: q.title,
-            author: q.author,
-            createdAt: q.createdAt,
-            answerCount: q.answers?.length || 0,
-            voteScore: (q.upvotes?.length || 0) - (q.downvotes?.length || 0),
-          })));
-        } catch {
-          setActivities([]);
-        }
-      }
-      setLoading(false);
-    };
-    fetchActivity();
-  }, []);
 
   const getIcon = (item) => {
     if (item.type === 'question') return <FiHelpCircle size={12} />;
