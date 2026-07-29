@@ -665,7 +665,7 @@ const DebateDetail = () => {
                 </button>
               </>
             )}
-            {['active'].includes(debate.status) && (
+            {['active', 'judging'].includes(debate.status) && (
               <button onClick={() => setShowJudgeModal(true)} className="inline-flex items-center gap-1.5 h-8 px-3.5 bg-purple-600 text-white rounded-[9px] text-[15px] font-medium hover:bg-purple-700 transition-all active:scale-[0.97]">
                 <FiShield size={12} /> Assign Judges
               </button>
