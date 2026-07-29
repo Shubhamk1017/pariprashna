@@ -50,10 +50,11 @@ const Questions = () => {
   const scrollContainerRef = useRef(null);
 
   const currentSort = sortBy;
+  const currentPageParam = parseInt(searchParams.get('page')) || 1;
 
   const { data: questionsData, isLoading: loading } = useQuestions({
-    page: 1, // Add proper pagination state later if needed
-    limit: 100,
+    page: currentPageParam,
+    limit: 20,
     sort: currentSort,
     tag: selectedTag,
     search: debouncedSearch
@@ -408,7 +409,6 @@ const Questions = () => {
                 onClick={() => {
                   const p = Math.max(1, pagination.page - 1);
                   setSearchParams({ sort: currentSort, page: p });
-                  setPagination(prev => ({ ...prev, page: p }));
                 }}
                 disabled={pagination.page === 1}
                 className="page-btn px-4 py-2 rounded-xl border border-gray-200/80 text-[14px] font-medium text-gray-500 hover:bg-white hover:border-gray-300 hover:text-gray-700 disabled:opacity-30 disabled:cursor-not-allowed"
@@ -426,7 +426,6 @@ const Questions = () => {
                     key={pageNum}
                     onClick={() => {
                       setSearchParams({ sort: currentSort, page: pageNum });
-                      setPagination(prev => ({ ...prev, page: pageNum }));
                     }}
                     className={`page-btn w-9 h-9 rounded-xl text-[14px] font-medium ${
                       pageNum === pagination.page
@@ -442,7 +441,6 @@ const Questions = () => {
                 onClick={() => {
                   const p = Math.min(pagination.totalPages, pagination.page + 1);
                   setSearchParams({ sort: currentSort, page: p });
-                  setPagination(prev => ({ ...prev, page: p }));
                 }}
                 disabled={pagination.page === pagination.totalPages}
                 className="page-btn px-4 py-2 rounded-xl border border-gray-200/80 text-[14px] font-medium text-gray-500 hover:bg-white hover:border-gray-300 hover:text-gray-700 disabled:opacity-30 disabled:cursor-not-allowed"
