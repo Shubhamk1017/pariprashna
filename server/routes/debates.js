@@ -340,13 +340,19 @@ router.post('/:id/judges', adminAuth, async (req, res) => {
   }
 });
 
-// Declare winner (Admin only)
-router.post('/:id/winner', adminAuth, async (req, res) => {
+// Declare winner (Admin or Judge)
+router.post('/:id/winner', auth, async (req, res) => {
   try {
     const { winner, finalRemarks } = req.body;
     if (!winner || !['government', 'opposition'].includes(winner)) return res.status(400).json({ message: 'Winner must be "government" or "opposition"' });
     const debate = await Debate.findById(req.params.id);
     if (!debate) return res.status(404).json({ message: 'Debate not found' });
+    
+    // Check authorization: must be admin OR an assigned judge
+    const isAdmin = req.user.role === 'admin';
+    const isAssignedJudge = isJudge(debate, req.user._id);
+    if (!isAdmin && !isAssignedJudge) return res.status(403).json({ message: 'Only admins or assigned judges can declare the winner' });
+
     if (debate.status !== 'judging') return res.status(400).json({ message: 'Debate must be in judging phase' });
     debate.winner = winner;
     debate.finalRemarks = finalRemarks?.trim() || '';

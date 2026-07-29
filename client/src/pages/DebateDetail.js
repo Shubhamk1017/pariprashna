@@ -395,6 +395,7 @@ const DebateDetail = () => {
   const isOnOpp = currentUserSide === 'opposition';
   const isParticipant = isOnGov || isOnOpp;
   const canJoin = debate?.status === 'open' && !isParticipant && isGuru();
+  const isCurrentJudge = debate?.judges?.some(j => String(j._id || j) === String(user?._id));
 
   const handleJoin = async () => {
     if (!joinSide) return;
@@ -677,6 +678,28 @@ const DebateDetail = () => {
             {debate.status === 'completed' && (
               <span className="inline-flex items-center gap-1.5 h-8 px-3.5 bg-gray-100 dark:bg-[#2A2520] text-gray-500 dark:text-gray-400 rounded-[9px] text-[15px] font-medium">
                 <FiLock size={12} /> Debate Locked
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Judge Actions ─────────────────────────── */}
+      {!isAdmin() && isCurrentJudge && (
+        <div className="bg-white/90 dark:bg-[#1C1814]/80 backdrop-blur-sm rounded-xl border border-purple-200/60 dark:border-purple-500/20 p-4 shadow-sm">
+          <h3 className="text-[15px] font-semibold text-purple-700 dark:text-purple-400 mb-3 flex items-center gap-2">
+            <FiShield size={14} />
+            Judge Actions
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            {debate.status === 'judging' && (
+              <button onClick={() => setShowWinnerModal(true)} className="inline-flex items-center gap-1.5 h-8 px-3.5 bg-amber-600 text-white rounded-[9px] text-[15px] font-medium hover:bg-amber-700 transition-all active:scale-[0.97]">
+                <FiAward size={12} /> Declare Winner
+              </button>
+            )}
+            {debate.status === 'completed' && (
+              <span className="inline-flex items-center gap-1.5 h-8 px-3.5 bg-gray-100 dark:bg-[#2A2520] text-gray-500 dark:text-gray-400 rounded-[9px] text-[15px] font-medium">
+                <FiLock size={12} /> Verdict Submitted
               </span>
             )}
           </div>
