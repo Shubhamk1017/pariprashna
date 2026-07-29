@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../utils/api';
 import { useAuth } from '../context/AuthContext';
@@ -43,9 +43,7 @@ const Debates = () => {
   const [statusFilter, setStatusFilter] = useState('');
   const [sort, setSort] = useState('newest');
 
-  useEffect(() => { fetchDebates(); }, [statusFilter, sort]);
-
-  const fetchDebates = async () => {
+  const fetchDebates = useCallback(async () => {
     setLoading(true);
     try {
       const params = { sort };
@@ -54,7 +52,9 @@ const Debates = () => {
       setDebates(res.data.debates);
     } catch (error) { console.error('Error fetching debates:', error); }
     setLoading(false);
-  };
+  }, [sort, statusFilter]);
+
+  useEffect(() => { fetchDebates(); }, [fetchDebates]);
 
   return (
     <div className="max-w-[1000px] mx-auto px-4 sm:px-6 py-6 sm:py-10">

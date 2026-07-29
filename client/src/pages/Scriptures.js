@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
 import { FiSearch, FiBookOpen, FiClock, FiExternalLink, FiX, FiPlay, FiPause, FiCheckCircle } from 'react-icons/fi';
 
 const BOOKS_META = [
