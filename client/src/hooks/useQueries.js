@@ -7,7 +7,11 @@ export const useQuestions = (filters = {}) => {
   return useQuery({
     queryKey: ['questions', filters],
     queryFn: async () => {
-      const params = new URLSearchParams(filters).toString();
+      // Clean filters to remove undefined, null, or empty string values
+      const cleanFilters = Object.fromEntries(
+        Object.entries(filters).filter(([_, v]) => v != null && v !== '')
+      );
+      const params = new URLSearchParams(cleanFilters).toString();
       const res = await api.get(`/questions?${params}`);
       return res.data;
     },
