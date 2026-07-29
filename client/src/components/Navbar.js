@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { FiHome, FiHelpCircle, FiUsers, FiBook, FiPlus, FiLogOut, FiMenu, FiX, FiShield, FiMessageSquare, FiSun, FiMoon, FiCommand, FiAlertCircle } from 'react-icons/fi';
+import { FiHome, FiHelpCircle, FiUsers, FiBook, FiPlus, FiLogOut, FiMenu, FiX, FiShield, FiMessageSquare, FiSun, FiMoon, FiCommand, FiAlertCircle, FiBookOpen, FiMessageCircle } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 
 const Navbar = ({ onOpenPalette }) => {
@@ -31,6 +31,8 @@ const Navbar = ({ onOpenPalette }) => {
     { path: '/questions', label: 'Questions', icon: FiHelpCircle },
     { path: '/users', label: 'Experts', icon: FiUsers },
     { path: '/tags', label: 'Tags', icon: FiBook },
+    { path: '/scriptures', label: 'Scriptures', icon: FiBookOpen },
+    { path: '/debates', label: 'Debates', icon: FiMessageCircle },
     { path: '/chat', label: 'AI Chat', icon: FiMessageSquare },
   ];
 

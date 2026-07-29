@@ -5,7 +5,7 @@ import api from '../utils/api';
 import {
   FiSearch, FiHome, FiHelpCircle, FiUsers, FiBook,
   FiSun, FiMoon, FiArrowRight, FiPlus, FiSend,
-  FiTrendingUp
+  FiTrendingUp, FiBookOpen, FiMessageCircle
 } from 'react-icons/fi';
 
 const QUICK_ACTIONS = [
@@ -15,6 +15,8 @@ const QUICK_ACTIONS = [
   { id: 'chat', label: 'AI Chat', icon: FiSend, action: '/chat' },
   { id: 'experts', label: 'Top Experts', icon: FiUsers, action: '/users' },
   { id: 'tags', label: 'Browse Tags', icon: FiBook, action: '/tags' },
+  { id: 'scriptures', label: 'Browse Scriptures', icon: FiBookOpen, action: '/scriptures' },
+  { id: 'debates', label: 'Debates (Śāstrārtha)', icon: FiMessageCircle, action: '/debates' },
 ];
 
 const CommandPalette = ({ open, onClose }) => {

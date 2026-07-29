@@ -51,6 +51,8 @@ app.use('/api/ai', rateLimit({ windowMs: 60 * 1000, max: 10 })); // 10 requests 
 app.use('/api/questions', rateLimit({ windowMs: 60 * 1000, max: 30 })); // 30 requests per minute
 app.use('/api/answers', rateLimit({ windowMs: 60 * 1000, max: 15 })); // 15 requests per minute
 app.use('/api/comments', rateLimit({ windowMs: 60 * 1000, max: 20 })); // 20 requests per minute
+app.use('/api/debates', rateLimit({ windowMs: 60 * 1000, max: 30 })); // 30 requests per minute for debates
+app.use('/api/shlokas', rateLimit({ windowMs: 60 * 1000, max: 40 })); // 40 requests per minute for scripture lookups
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
@@ -106,6 +108,8 @@ app.use('/api/activity', require('./routes/activity'));
 app.use('/api/bot', require('./routes/bot'));
 app.use('/api/whatsapp', require('./routes/whatsapp'));
 app.use('/api/verses', require('./routes/verses'));
+app.use('/api/debates', require('./routes/debates'));
+app.use('/api/shlokas', require('./routes/shlokas'));
 
 // Health check
 app.get('/api/health', (req, res) => {

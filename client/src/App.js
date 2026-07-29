@@ -25,6 +25,10 @@ const AIChat = lazy(() => import('./pages/AIChat'));
 const ReviewQueues = lazy(() => import('./pages/ReviewQueues'));
 const Bounties = lazy(() => import('./pages/Bounties'));
 const AuthCallback = lazy(() => import('./pages/AuthCallback'));
+const Scriptures = lazy(() => import('./pages/Scriptures'));
+const Debates = lazy(() => import('./pages/Debates'));
+const CreateDebate = lazy(() => import('./pages/CreateDebate'));
+const DebateDetail = lazy(() => import('./pages/DebateDetail'));
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -79,6 +83,10 @@ function App() {
                     <Route path="/chat" element={<ProtectedRoute><AIChat /></ProtectedRoute>} />
                     <Route path="/reviews" element={<ReviewQueues />} />
                     <Route path="/bounties" element={<Bounties />} />
+                    <Route path="/scriptures" element={<Scriptures />} />
+                    <Route path="/debates" element={<Debates />} />
+                    <Route path="/debates/create" element={<ProtectedRoute><CreateDebate /></ProtectedRoute>} />
+                    <Route path="/debates/:id" element={<DebateDetail />} />
                   </Routes>
                 </Suspense>
               </main>
