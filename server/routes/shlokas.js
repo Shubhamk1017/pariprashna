@@ -5,17 +5,13 @@ const { BOOK_ALIASES, getAudioUrl } = require('../utils/shlokaRef');
 const hardcodedShlokas = require('../utils/shlokas');
 
 let db;
-let mongoClient;
 
 async function getDB() {
   if (!db) {
-    if (!process.env.VEDABASE_MONGO_URI) {
-      throw new Error('VEDABASE_MONGO_URI environment variable is not defined');
+    if (!mongoose.connection || mongoose.connection.readyState !== 1) {
+      throw new Error('Mongoose not connected');
     }
-    const { MongoClient } = require('mongodb');
-    mongoClient = new MongoClient(process.env.VEDABASE_MONGO_URI);
-    await mongoClient.connect();
-    db = mongoClient.db('vedabase');
+    db = mongoose.connection.getClient().db('vedabase');
   }
   return db;
 }
