@@ -52,7 +52,6 @@ const SHLOKA_LIST = [
   },
 ];
 
-const FALLBACK_SHLOKA = SHLOKA_LIST[0];
 
 const cleanSanskrit = (text) => {
   if (!text) return '';
@@ -203,7 +202,7 @@ const Home = () => {
       }, 500);
     }, 8000);
     return () => clearInterval(interval);
-  }, []);
+  }, [activeShlokaList]);
 
   const cycleShloka = () => {
     setShlokaFading(true);

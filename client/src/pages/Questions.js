@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import api from '../utils/api';
 import { useAuth } from '../context/AuthContext';
@@ -13,12 +13,6 @@ const SORT_OPTIONS = [
   { value: 'votes', label: 'Top Voted', icon: FiTrendingUp },
   { value: 'newest', label: 'Newest', icon: FiClock },
   { value: 'unanswered', label: 'Unanswered', icon: FiMessageSquare },
-];
-
-const FILTER_TABS = [
-  ['all', 'All'],
-  ['answered', 'Answered'],
-  ['unanswered', 'Unanswered'],
 ];
 
 const Questions = () => {
