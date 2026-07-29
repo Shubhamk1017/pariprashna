@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FiSearch, FiBookOpen, FiClock, FiExternalLink, FiX, FiPlay, FiPause, FiCheckCircle } from 'react-icons/fi';
+import api from '../utils/api';
 
 const BOOKS_META = [
   { id: 'bg', name: 'Bhagavad Gita', tag: 'bhagavad-gita', aliases: ['BG', 'GITA', 'BHAGAVADGITA'], expectedVerses: 700, refFormat: '@BG chapter.verse', refExample: '@BG 2.47', description: 'The timeless dialogue between Lord Krishna and Arjuna on the battlefield of Kurukshetra, covering dharma, yoga, and the path to liberation.' },
@@ -55,9 +56,8 @@ const Scriptures = () => {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch('/api/shlokas/stats');
-        if (!res.ok) throw new Error('Failed to load');
-        const data = await res.json();
+        const res = await api.get('/shlokas/stats');
+        const data = res.data;
         if (!cancelled) { setStats(data.stats || {}); setTotalVerses(data.totalVerses || 0); }
       } catch (err) { if (!cancelled) { setStats({}); setTotalVerses(0); } }
       if (!cancelled) setStatsLoading(false);
@@ -77,7 +77,7 @@ const Scriptures = () => {
     if (!ref) { setShlokaLoading(false); return; }
     setShlokaLoading(true);
     debounceRef.current = setTimeout(async () => {
-      try { const res = await fetch(`/api/shlokas/parse?ref=${encodeURIComponent(ref)}`); if (!res.ok) throw new Error('API error'); const data = await res.json(); if (data.matches && data.matches.length > 0) setShlokaResult(data.matches[0]); else setShlokaError('Verse not found'); } catch (err) { setShlokaError('Could not look up verse'); } setShlokaLoading(false);
+      try { const res = await api.get(`/shlokas/parse?ref=${encodeURIComponent(ref)}`); const data = res.data; if (data.matches && data.matches.length > 0) setShlokaResult(data.matches[0]); else setShlokaError('Verse not found'); } catch (err) { setShlokaError('Could not look up verse'); } setShlokaLoading(false);
     }, 400);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [search]);
