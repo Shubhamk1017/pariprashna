@@ -26,7 +26,9 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
+    // Allow if no origin (server-to-server), if it matches allowedOrigins precisely, 
+    // or if it's ANY vercel.app deployment (preview or production)
+    if (!origin || allowedOrigins.includes(origin) || (origin && origin.endsWith('.vercel.app'))) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
