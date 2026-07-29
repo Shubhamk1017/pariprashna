@@ -8,23 +8,29 @@ router.get('/', async (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit) || 8, 20);
 
+    // Fetch extra to account for filtering
+    const fetchLimit = limit * 3;
+
     const [recentQuestions, recentAnswers] = await Promise.all([
       Question.find()
-        .populate('author', 'name avatar')
+        .populate('author', 'name avatar role')
         .sort({ createdAt: -1 })
-        .limit(limit)
+        .limit(fetchLimit)
         .lean(),
       Answer.find()
-        .populate('author', 'name avatar')
+        .populate('author', 'name avatar role')
         .populate('question', 'title')
         .sort({ createdAt: -1 })
-        .limit(limit)
+        .limit(fetchLimit)
         .lean(),
     ]);
 
     const activities = [];
+    const hiddenRoles = ['admin', 'guru', 'acharya'];
 
     for (const q of recentQuestions) {
+      if (q.author && hiddenRoles.includes(q.author.role)) continue;
+      
       activities.push({
         type: 'question',
         _id: q._id,
@@ -38,6 +44,8 @@ router.get('/', async (req, res) => {
 
     for (const a of recentAnswers) {
       if (!a.question) continue;
+      if (a.author && hiddenRoles.includes(a.author.role)) continue;
+
       activities.push({
         type: 'answer',
         _id: a._id,
