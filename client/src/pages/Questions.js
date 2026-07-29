@@ -51,7 +51,8 @@ const Questions = () => {
     limit: 20,
     sort: currentSort,
     tag: selectedTag,
-    search: debouncedSearch
+    search: debouncedSearch,
+    filter: filter !== 'all' ? filter : undefined
   });
 
   const allQuestions = questionsData?.questions || [];
@@ -227,7 +228,7 @@ const Questions = () => {
                 <FiCheckCircle size={16} />
               </div>
               <div>
-                <div className="text-[18px] font-bold text-gray-900 leading-none">-</div>
+                <div className="text-[18px] font-bold text-gray-900 leading-none">{questionsData?.answeredCount || 0}</div>
                 <div className="text-[12px] text-gray-400 mt-0.5">Answered</div>
               </div>
             </div>
@@ -236,7 +237,7 @@ const Questions = () => {
                 <FiAlertCircle size={16} />
               </div>
               <div>
-                <div className="text-[18px] font-bold text-gray-900 leading-none">-</div>
+                <div className="text-[18px] font-bold text-gray-900 leading-none">{questionsData?.unansweredCount || 0}</div>
                 <div className="text-[12px] text-gray-400 mt-0.5">Unanswered</div>
               </div>
             </div>

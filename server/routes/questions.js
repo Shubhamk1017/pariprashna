@@ -123,20 +123,20 @@ async function generateAIAnswer(questionId, title, body) {
 // Get all questions
 router.get('/', async (req, res) => {
   try {
-    const { page = 1, limit = 20, sort = 'newest', tag, search } = req.query;
+    const { page = 1, limit = 20, sort = 'newest', tag, search, filter } = req.query;
     
-    let query = {};
+    let baseQuery = {};
     
     if (tag) {
       const tagDoc = await Tag.findOne({ name: tag });
       if (tagDoc) {
-        query.tags = tagDoc._id;
+        baseQuery.tags = tagDoc._id;
       }
     }
     
     let projection = {};
     if (search) {
-      query.$text = { $search: search };
+      baseQuery.$text = { $search: search };
       projection = { score: { $meta: "textScore" } };
     }
 
@@ -150,22 +150,38 @@ router.get('/', async (req, res) => {
     if (sort === 'unverified') {
       // Find questions that have unverified AI answers
       const unverifiedAnswers = await Answer.find({ isAIGenerated: true, isVerifiedByAdmin: false }).distinct('question');
-      query._id = { $in: unverifiedAnswers };
+      baseQuery._id = { $in: unverifiedAnswers };
     }
 
-    const questions = await Question.find(query, projection)
+    // Get counts for the base query (independent of answered/unanswered filter)
+    const totalQuestions = await Question.countDocuments(baseQuery);
+    const answeredCount = await Question.countDocuments({ ...baseQuery, 'answers.0': { $exists: true } });
+    const unansweredCount = await Question.countDocuments({ ...baseQuery, answers: { $size: 0 } });
+
+    // Apply specific filter for the actual list query
+    let listQuery = { ...baseQuery };
+    if (filter === 'answered') {
+      listQuery['answers.0'] = { $exists: true };
+    } else if (filter === 'unanswered') {
+      listQuery.answers = { $size: 0 };
+    }
+
+    const questions = await Question.find(listQuery, projection)
       .populate('author', 'name avatar reputation')
       .populate('tags', 'name')
       .sort(sortOption)
       .skip((page - 1) * limit)
       .limit(parseInt(limit));
 
-    const total = await Question.countDocuments(query);
+    const total = await Question.countDocuments(listQuery);
 
     res.json({
       questions,
       totalPages: Math.ceil(total / limit),
-      currentPage: parseInt(page)
+      currentPage: parseInt(page),
+      totalQuestions,
+      answeredCount,
+      unansweredCount
     });
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
