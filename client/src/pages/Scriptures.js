@@ -48,8 +48,6 @@ const Scriptures = () => {
   const [shlokaLoading, setShlokaLoading] = useState(false);
   const [shlokaError, setShlokaError] = useState('');
   const [stats, setStats] = useState({});
-  const [totalVerses, setTotalVerses] = useState(null);
-  const [statsLoading, setStatsLoading] = useState(true);
   const debounceRef = useRef(null);
 
   useEffect(() => {
@@ -58,17 +56,13 @@ const Scriptures = () => {
       try {
         const res = await api.get('/shlokas/stats');
         const data = res.data;
-        if (!cancelled) { setStats(data.stats || {}); setTotalVerses(data.totalVerses || 0); }
-      } catch (err) { if (!cancelled) { setStats({}); setTotalVerses(0); } }
-      if (!cancelled) setStatsLoading(false);
+        if (!cancelled) { setStats(data.stats || {}); }
+      } catch (err) { if (!cancelled) { setStats({}); } }
     })();
     return () => { cancelled = true; };
   }, []);
 
-  const loadedVerses = Object.keys(stats).reduce((acc, k) => acc + stats[k], 0);
   const booksPresent = Object.keys(stats).length;
-  const expectedTotal = Object.values(BOOK_STATS_LABELS).reduce((acc, b) => acc + b.v, 0);
-  const pct = totalVerses ? Math.round((loadedVerses / expectedTotal) * 100) : 0;
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -106,9 +100,7 @@ const Scriptures = () => {
                     <span key={a} className={`text-xs font-mono font-semibold px-2 py-0.5 rounded-full ${isLoaded ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-500'}`}>{a}</span>
                   ))}</div>
                 </div>
-                {isLoaded ? (
-                  <span className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-full bg-green-100 text-green-700 border border-green-300"><FiCheckCircle size={14} /> Loaded</span>
-                ) : isFuture ? (
+                {isLoaded ? null : isFuture ? (
                   <span className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-full bg-gray-200 text-gray-500"><FiClock /> Coming Soon</span>
                 ) : (
                   <span className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-full bg-yellow-100 text-yellow-700"><FiClock /> Not loaded</span>
