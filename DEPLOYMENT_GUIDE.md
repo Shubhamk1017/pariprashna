@@ -65,6 +65,7 @@ Go to **"Environment"** tab and add these (copy values from your previous projec
 | `NODE_ENV` | `production` | Same for all deployments |
 | `PORT` | `5000` | Same for all deployments |
 | `MONGODB_URI` | *(copy from previous project)* | Same database, same data |
+| `VEDABASE_MONGO_URI` | *(copy from your local .env)* | Needed for Scriptures feature (different cluster) |
 | `JWT_SECRET` | *(copy from previous project)* | Same secret so existing tokens remain valid |
 | `CLIENT_URL` | `https://<your-app>.vercel.app` | ⚠️ Update after Step 3 |
 | `SITE_URL` | `https://pariprashna-api.onrender.com` | Will match your Render URL |
@@ -199,6 +200,7 @@ Use this checklist to make sure you've copied everything:
 ☐ NODE_ENV=production
 ☐ PORT=5000
 ☐ MONGODB_URI=<copied from previous>
+☐ VEDABASE_MONGO_URI=<copied from your local .env>
 ☐ JWT_SECRET=<copied from previous>
 ☐ CLIENT_URL=<your new Vercel URL>
 ☐ SITE_URL=<your new Render URL>

@@ -5,15 +5,17 @@ const { BOOK_ALIASES, getAudioUrl } = require('../utils/shlokaRef');
 const hardcodedShlokas = require('../utils/shlokas');
 
 let db;
+let mongoClient;
 
 async function getDB() {
   if (!db) {
-    // Reuse Mongoose's existing connection instead of creating a new MongoClient
-    // This avoids SSL/TLS issues and extra connection overhead
-    if (!mongoose.connection || mongoose.connection.readyState !== 1) {
-      throw new Error('Mongoose not connected');
+    if (!process.env.VEDABASE_MONGO_URI) {
+      throw new Error('VEDABASE_MONGO_URI environment variable is not defined');
     }
-    db = mongoose.connection.getClient().db('vedabase');
+    const { MongoClient } = require('mongodb');
+    mongoClient = new MongoClient(process.env.VEDABASE_MONGO_URI);
+    await mongoClient.connect();
+    db = mongoClient.db('vedabase');
   }
   return db;
 }
